@@ -53,7 +53,6 @@ def instr_to_array(instr_int):
 def get_value(code, index, mode, relative_value):
   if mode == 0:
     i = code[index]
-
     if (i > len(code)):
       return 0
     else:
@@ -95,7 +94,7 @@ def execute_code(code, setting, input_val, index, setting_used):
     # Get the instruction as an array
     instr_arr = instr_to_array(instr_int)
 
-    print("Excuting")
+    print("i: " + str(instr_int) + "," + str(code[i+1]) + "," + str(code[i+2])+ "," + str(code[i+3]))
 
     operation = instr_arr[-1]
     a_mode = instr_arr[2]
@@ -109,18 +108,17 @@ def execute_code(code, setting, input_val, index, setting_used):
       a = get_value(code, i + 1, a_mode, relative_value)
       b = get_value(code, i + 2, b_mode, relative_value)
 
-      pos = relative_value + code[i+3] if c_mode == 2 else code[i+3]
+      pos = code[i+3]
       assign(code, pos, (a+b))
       i = i + 4
     elif(operation == 2):
       a = get_value(code, i + 1, a_mode, relative_value)
       b = get_value(code, i + 2, b_mode, relative_value)
-      pos = relative_value + code[i+3] if c_mode == 2 else code[i+3]
+      pos = code[i+3]
       assign(code,pos, a*b)
       i = i + 4
     elif (operation == 3):
       a = get_value(code, i + 1, a_mode, relative_value)
-      
       val = int(input('Please enter a number: '))
       assign(code, a, val)
       i = i + 2
@@ -147,20 +145,21 @@ def execute_code(code, setting, input_val, index, setting_used):
     elif (operation == 7):
       a = get_value(code, i + 1, a_mode, relative_value)
       b = get_value(code, i + 2, b_mode, relative_value)
-      pos = relative_value + code[i+3] if c_mode == 2 else code[i+3]
+      pos = code[i+3]
 
       assign(code, pos, (1 if (a < b) else 0))
       i = i + 4
     elif (operation == 8):
       a = get_value(code, i + 1, a_mode, relative_value)
       b = get_value(code, i + 2, b_mode, relative_value)
-      pos = relative_value + code[i+3] if c_mode == 2 else code[i+3]
+      pos = code[i+3]
 
       assign(code, pos, (1 if (a == b) else 0))
       i = i + 4
     elif (operation == 9):
       a = get_value(code, i + 1, a_mode, relative_value)
       relative_value += a
+
       i = i + 2
 
   print("Finished at " + str(operation))
