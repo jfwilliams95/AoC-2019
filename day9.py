@@ -3,30 +3,136 @@
 
 import types
 
+class Instruction:
+
+  def __init__(self, val):
+    # Turn it into a string
+    val_str = str(val)
+
+    # Turn it into 5 digits
+    while len(val_str) < 5:
+      val_str = "0" + val_str
+
+    # Get the operator
+    self.operator = int(val_str[3:5])
+    self.modes = []
+    self.modes.append(int(val_str[0]))
+    self.modes.append(int(val_str[1]))
+    self.modes.append(int(val_str[2]))
+
+  def __str__(self):
+    line = str(self.modes[0]) + str(self.modes[1]) + str(self.modes[2])
+    if (self.operator < 10):
+      line += "0"
+    line += str(self.operator)
+    return line
+
 class Code:
 
-  setting = 0
-  code = []
-  i = 0
-  setting_used = False
-
-  def __init__(self, code, setting):
-    # copy the code
-    self.code = []
-    for c in code:
-      self.code.append(c)
-
-    self.setting = setting
+  def __init__(self, code):
+    self.code = code
     self.i = 0
-    self.setting_used = False
+    self.rel_val = 0
 
-  def execute(self, val):
-    obj = execute_code(self.code, self.setting, val, self.i, self.setting_used)
-    self.setting_used = True
+  def get(self, index, mode):
+    i = index
+    if mode == 0:
+      i = self.code[index]
+    elif mode == 2:
+      i = self.code[index] + self.rel_val
 
-    self.code = obj.code
-    self.i = obj.index
-    return obj
+    if i > len(self.code)-1:
+      return 0
+
+    return self.code[i]
+
+  def get_idx(self, index, mode):
+    i = self.code[index]
+    if mode == 2:
+      i += self.rel_val
+
+    return i
+
+  def set(self, index, val):
+    while index > len(self.code)-1:
+      self.code.append(0)
+
+    self.code[index] = val
+
+  def execute(self):
+
+    while True:
+      instr = Instruction(self.code[self.i])
+
+      if (instr.operator == 99):
+        break
+
+      if instr.operator == 1:
+        a = self.get(self.i + 1, instr.modes[2])
+        b = self.get(self.i + 2, instr.modes[1])
+        c = self.get_idx(self.i + 3, instr.modes[0])
+
+        self.set(c, (a + b))
+        self.i += 4
+      elif instr.operator == 2:
+        a = self.get(self.i + 1, instr.modes[2])
+        b = self.get(self.i + 2, instr.modes[1])
+        c = self.get_idx(self.i + 3, instr.modes[0])
+
+        self.set(c, (a * b))
+        self.i += 4
+      elif instr.operator == 3:
+        a = self.get_idx(self.i + 1, instr.modes[2])
+
+        val = int(input("Enter a value: "))
+        self.set(a, val)
+        self.i += 2
+      elif instr.operator == 4:
+        a = self.get(self.i + 1, instr.modes[2])
+
+        print(a)
+        self.i += 2
+      elif instr.operator == 5:
+        a = self.get(self.i + 1, instr.modes[2])
+        b = self.get(self.i + 2, instr.modes[1])
+
+        if (a != 0):
+          self.i = b
+        else:
+          self.i += 3
+      elif instr.operator == 6:
+        a = self.get(self.i + 1, instr.modes[2])
+        b = self.get(self.i + 2, instr.modes[1])
+
+        if (a == 0):
+          self.i = b
+        else:
+          self.i += 3
+      elif instr.operator == 7:
+        a = self.get(self.i + 1, instr.modes[2])
+        b = self.get(self.i + 2, instr.modes[1])
+        c = self.get_idx(self.i + 3, instr.modes[0])
+
+        val = 1 if a < b else 0
+        self.set(c, val)
+        self.i += 4
+      elif instr.operator == 8:
+        a = self.get(self.i + 1, instr.modes[2])
+        b = self.get(self.i + 2, instr.modes[1])
+        c = self.get_idx(self.i + 3, instr.modes[0])
+
+        val = 1 if a == b else 0
+        self.set(c, val)
+        self.i += 4
+      elif instr.operator == 9:
+        a = self.get(self.i + 1, instr.modes[2])
+
+        self.rel_val += a
+        self.i += 2
+      else:
+        print("ERROR - Tried to execute an operation code of " + str(instr.operator))
+        break
+          
 
 # Reads in the file
 def get_code(filename):
@@ -37,157 +143,7 @@ def get_code(filename):
    
     for codestr in codestrs:
       code.append(int(codestr.strip()))
-  return code
-
-def instr_to_array(instr_int):
-  instr_str = str(instr_int)
-
-  # Add in leading zeroes
-  while len(instr_str) < 5:
-    instr_str = "0" + instr_str
-
-  # Break it out
-  instr = [int(instr_str[0]), int(instr_str[1]), int(instr_str[2]), int(instr_str[3:5])]
-  return instr
-
-def get_value(code, index, mode, relative_value):
-  if mode == 0:
-    i = code[index]
-    if (i > len(code)):
-      return 0
-    else:
-      return code[code[index]]
-  elif mode == 1:
-    return 0 if index > len(code) else code[index]
-  elif mode == 2:
-    i = relative_value + code[index]
-    if i > len(code):
-      return 0
-    else:
-      return code[relative_value + code[index]]
-
-def assign(code, index, value):
-  while index > len(code)-1:
-    code.append(0)
-  code[index] = value
-
-# Executes the code
-def execute_code(code, setting, input_val, index, setting_used):
-
-  # The return object
-  return_obj = types.SimpleNamespace()
-  return_obj.code = code
-  return_obj.index = index
-  return_obj.value = 0
-  return_obj.finished = False
-
-  relative_value = 0
-
-  i = index
-  code_len = len(code)
-
-  output = None
-  while True:
-
-    # Read the instruction as an int
-    instr_int = code[i]
-    # Get the instruction as an array
-    instr_arr = instr_to_array(instr_int)
-
-    print("i: " + str(instr_int) + "," + str(code[i+1]) + "," + str(code[i+2])+ "," + str(code[i+3]))
-
-    operation = instr_arr[-1]
-    a_mode = instr_arr[2]
-    b_mode = instr_arr[1]
-    c_mode = instr_arr[0]
-
-    if (operation not in range(1,11)):
-      break
-
-    if (operation == 1):
-      a = get_value(code, i + 1, a_mode, relative_value)
-      b = get_value(code, i + 2, b_mode, relative_value)
-
-      pos = code[i+3]
-      assign(code, pos, (a+b))
-      i = i + 4
-    elif(operation == 2):
-      a = get_value(code, i + 1, a_mode, relative_value)
-      b = get_value(code, i + 2, b_mode, relative_value)
-      pos = code[i+3]
-      assign(code,pos, a*b)
-      i = i + 4
-    elif (operation == 3):
-      a = get_value(code, i + 1, a_mode, relative_value)
-      val = int(input('Please enter a number: '))
-      assign(code, a, val)
-      i = i + 2
-    elif (operation == 4):
-      a = get_value(code, i + 1, a_mode, relative_value)
-      print(a)
-      i = i + 2
-    elif (operation == 5):
-      a = get_value(code, i + 1, a_mode, relative_value)
-      b = get_value(code, i + 2, b_mode, relative_value)
-
-      if a:
-        i = b
-      else:
-        i = i + 3
-    elif (operation == 6):
-      a = get_value(code, i + 1, a_mode, relative_value)
-      b = get_value(code, i + 2, b_mode, relative_value)
-
-      if not a:
-        i = b
-      else:
-        i = i + 3
-    elif (operation == 7):
-      a = get_value(code, i + 1, a_mode, relative_value)
-      b = get_value(code, i + 2, b_mode, relative_value)
-      pos = code[i+3]
-
-      assign(code, pos, (1 if (a < b) else 0))
-      i = i + 4
-    elif (operation == 8):
-      a = get_value(code, i + 1, a_mode, relative_value)
-      b = get_value(code, i + 2, b_mode, relative_value)
-      pos = code[i+3]
-
-      assign(code, pos, (1 if (a == b) else 0))
-      i = i + 4
-    elif (operation == 9):
-      a = get_value(code, i + 1, a_mode, relative_value)
-      relative_value += a
-
-      i = i + 2
-
-  print("Finished at " + str(operation))
-  return_obj.finished = True
-  return return_obj
-
-def execute_set(code, num_set):
-  
-  # Generate the code array
-  code_objs = []
-  for num in num_set:
-    code_objs.append(Code(code, num))
-
-  finished = False
-  val = 0
-  i = 0
-  while not finished:
-    obj = code_objs[i].execute(val)
-
-    if (obj.finished):
-      finished = True
-    else:
-      val = obj.value
-      i += 1
-      i = i if i < len(code_objs) else 0
-
-  return val
+  return Code(code)
 
 code = get_code('./input/day9.txt')
-cobj = Code(code, 1)
-cobj.execute(1)
+code.execute()
